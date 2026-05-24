@@ -92,7 +92,7 @@
                 <div class="absolute inset-0 border-2 border-cyan-400 animate-ping rounded-lg opacity-40"></div>
                 <i class="fa-solid fa-mask text-2xl text-pink-500 animate-pulse"></i>
             </div>
-            <p class="text-[11px] text-pink-400 font-mono tracking-widest uppercase animate-pulse">Intercepting API Node...</p>
+            <p class="text-[11px] text-pink-400 font-mono tracking-widest uppercase animate-pulse">Bypassing Gateways...</p>
         </div>
 
         <div id="resultBox" class="hidden space-y-4">
@@ -131,7 +131,7 @@
                 </div>
                 <div class="flex items-center justify-between border-b border-pink-500/10 pb-1">
                     <span class="text-gray-500">DATA_GATEWAY:</span>
-                    <span class="text-cyan-400 font-bold">RAPIDAPI_WHATSAPP_OSINT</span>
+                    <span class="text-cyan-400 font-bold">PROXY_PROXY_OSINT</span>
                 </div>
                 <div class="flex items-center justify-between">
                     <span class="text-gray-500">EXPLOIT_LOG:</span>
@@ -159,7 +159,7 @@
                 return;
             }
 
-            // মোবাইল নাম্বার স্যানিটাইজেশন এবং কান্ট্রি কোড ইনজেকশন (যেমন: 019xx -> 88019xx)
+            // মোবাইল নাম্বার স্যানিটাইজেশন
             let cleanPhone = phoneInput.replace("+", "").replace(/\s+/g, "");
             if (cleanPhone.length === 11 && cleanPhone.startsWith('0')) {
                 cleanPhone = '88' + cleanPhone;
@@ -167,7 +167,7 @@
                 cleanPhone = '880' + cleanPhone;
             }
 
-            // UI ইন্টারফেস রিসেট ও লোডার অ্যানিমেশন স্টার্ট
+            // UI রিসেট
             results.classList.add('hidden');
             loader.classList.remove('hidden');
             targetAvatar.classList.add('hidden');
@@ -177,26 +177,43 @@
                 phone: cleanPhone
             };
 
-            // সরাসরি ব্রাউজার থেকে RapidAPI গেটওয়েতে সংযোগ
-            fetch('https://whatsapp-osint.p.rapidapi.com/bizos', {
+            // Vercel-এর ব্লকিং এড়াতে Allorigins CORS Proxy ব্যবহার করা হয়েছে
+            const targetUrl = 'https://whatsapp-osint.p.rapidapi.com/bizos';
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+
+            fetch(proxyUrl, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'x-rapidapi-host': 'whatsapp-osint.p.rapidapi.com',
-                    'x-rapidapi-key': 'b3ad11e41cmshb18121f061df58ep1b5c61jsnd7a63dda9d56'
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(payload)
+                // প্রক্সি সার্ভারের মাধ্যমে পাঠানোর জন্য বডিতে মেটাডাটা ও রিয়েল রিকোয়েস্ট পাঠানো হচ্ছে
+                body: JSON.stringify({
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-rapidapi-host': 'whatsapp-osint.p.rapidapi.com',
+                        'x-rapidapi-key': 'b3ad11e41cmshb18121f061df58ep1b5c61jsnd7a63dda9d56'
+                    },
+                    body: JSON.stringify(payload)
+                })
             })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('API Response Error (Status: ' + response.status + ')');
+                    throw new Error('Network response failure (Status: ' + response.status + ')');
                 }
                 return response.json();
             })
-            .then(data => {
+            .then(proxyData => {
                 loader.classList.add('hidden');
                 
-                // ডিবাগিং ট্র্যাকার
+                // Allorigins প্রক্সি ডাটা মূলত 'contents' স্ট্রিং এর ভেতর পাঠায়, তাই একে পার্স করতে হবে
+                let data;
+                try {
+                    data = JSON.parse(proxyData.contents);
+                } catch(e) {
+                    data = proxyData.contents || proxyData;
+                }
+
                 console.log("=== API RAW RESPONSE ===", data);
 
                 document.getElementById('resPhoneCard').innerText = "+" + cleanPhone;
@@ -204,7 +221,6 @@
                 document.getElementById('waLiveActionBtn').href = `https://api.whatsapp.com/send/?phone=${cleanPhone}&text&type=phone_number&app_absent=0`;
 
                 if (data) {
-                    // রেসপন্স অ্যারে (Array) হলে তার ১ম উপাদান [0] তুলে নেওয়া হচ্ছে
                     let targetData = data;
                     if (Array.isArray(data) && data.length > 0) {
                         targetData = data[0];
@@ -218,17 +234,13 @@
 
                     console.log("--- Extracted Target Object ---", targetData);
 
-                    // বহুমুখী Key ম্যাচিং ফিল্টার (নামের জন্য)
                     const bizName = targetData.name || targetData.pushname || targetData.pushName || targetData.verified_name || targetData.verifiedName || targetData.title || targetData.id || "UNKNOWN USER";
-                    
-                    // বহুমুখী Key ম্যাচিং ফিল্টার (স্ট্যাটাসের জন্য)
                     const bizStatus = targetData.status || targetData.about || targetData.description || "ACTIVE NODE";
                     
                     document.getElementById('resPushName').innerText = bizName;
                     document.getElementById('resTableBizName').innerText = bizName;
                     document.getElementById('resTableBizStatus').innerText = bizStatus;
 
-                    // বহুমুখী Key ম্যাচিং ফিল্টার (প্রোফাইল ইমেজের জন্য)
                     const imgUrl = targetData.profile_picture || targetData.profile_pic || targetData.profilePicture || targetData.image || targetData.avatar || targetData.imgUrl || targetData.url || targetData.profile;
                     
                     if (imgUrl && imgUrl !== "" && imgUrl !== "null" && imgUrl !== undefined) {
@@ -245,7 +257,7 @@
             })
             .catch(err => {
                 loader.classList.add('hidden');
-                alert('EXPLOIT_FAILED: ' + err.message);
+                alert('EXPLOIT_FAILED / TIMEOUT: ' + err.message + '\nলোকালহোস্টে ঠিক চললে এটি নিশ্চিতভাবে নেটওয়ার্ক ব্লকিং সমস্যা।');
                 console.error(err);
             });
         }
