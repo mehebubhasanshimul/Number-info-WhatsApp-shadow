@@ -15,7 +15,6 @@
             min-height: 100vh;
         }
         .cyber-font { font-family: 'Orbitron', sans-serif; }
-        
         .neon-title {
             color: #00ffcc;
             text-shadow: 0 0 10px #00ffcc, 0 0 20px #00ffcc, 0 0 35px #00b3b3;
@@ -25,19 +24,16 @@
             color: #ff0055;
             text-shadow: 0 0 8px #ff0055, 0 0 15px #ff0055;
         }
-        
         .cyber-panel {
             background: rgba(6, 10, 26, 0.95);
             border: 2px solid #00ffcc;
             box-shadow: 0 0 25px rgba(0, 255, 204, 0.2), inset 0 0 20px rgba(0, 255, 204, 0.1);
         }
-        
         .matrix-bg {
             background-image: linear-gradient(rgba(0, 255, 204, 0.04) 1px, transparent 1px),
                               linear-gradient(90deg, rgba(0, 255, 204, 0.04) 1px, transparent 1px);
             background-size: 20px 20px;
         }
-        
         .laser-line {
             width: 100%;
             height: 3px;
@@ -45,15 +41,8 @@
             position: absolute;
             animation: laserMove 5s linear infinite;
         }
-
-        @keyframes laserMove {
-            0% { top: 0%; }
-            100% { top: 100%; }
-        }
-        @keyframes textGlow {
-            0% { text-shadow: 0 0 8px #00ffcc; }
-            100% { text-shadow: 0 0 18px #00ffcc; }
-        }
+        @keyframes laserMove { 0% { top: 0%; } 100% { top: 100%; } }
+        @keyframes textGlow { 0% { text-shadow: 0 0 8px #00ffcc; } 100% { text-shadow: 0 0 18px #00ffcc; } }
     </style>
 </head>
 <body class="matrix-bg flex flex-col items-center justify-center p-4 relative">
@@ -92,7 +81,7 @@
                 <div class="absolute inset-0 border-2 border-cyan-400 animate-ping rounded-lg opacity-40"></div>
                 <i class="fa-solid fa-mask text-2xl text-pink-500 animate-pulse"></i>
             </div>
-            <p class="text-[11px] text-pink-400 font-mono tracking-widest uppercase animate-pulse">Bypassing Gateways...</p>
+            <p class="text-[11px] text-pink-400 font-mono tracking-widest uppercase animate-pulse">Decrypting secure channel...</p>
         </div>
 
         <div id="resultBox" class="hidden space-y-4">
@@ -131,7 +120,7 @@
                 </div>
                 <div class="flex items-center justify-between border-b border-pink-500/10 pb-1">
                     <span class="text-gray-500">DATA_GATEWAY:</span>
-                    <span class="text-cyan-400 font-bold">PROXY_PROXY_OSINT</span>
+                    <span class="text-cyan-400 font-bold">VERCEL_SECURE_EDGE</span>
                 </div>
                 <div class="flex items-center justify-between">
                     <span class="text-gray-500">EXPLOIT_LOG:</span>
@@ -159,7 +148,6 @@
                 return;
             }
 
-            // মোবাইল নাম্বার স্যানিটাইজেশন
             let cleanPhone = phoneInput.replace("+", "").replace(/\s+/g, "");
             if (cleanPhone.length === 11 && cleanPhone.startsWith('0')) {
                 cleanPhone = '88' + cleanPhone;
@@ -167,53 +155,27 @@
                 cleanPhone = '880' + cleanPhone;
             }
 
-            // UI রিসেট
             results.classList.add('hidden');
             loader.classList.remove('hidden');
             targetAvatar.classList.add('hidden');
             avatarFallback.classList.remove('hidden');
 
-            const payload = {
-                phone: cleanPhone
-            };
-
-            // Vercel-এর ব্লকিং এড়াতে Allorigins CORS Proxy ব্যবহার করা হয়েছে
-            const targetUrl = 'https://whatsapp-osint.p.rapidapi.com/bizos';
-            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-
-            fetch(proxyUrl, {
+            // আমাদের নিজস্ব Vercel serverless ব্যাক-এন্ড এন্ডপয়েন্টে হিট করা হচ্ছে
+            fetch('/api/track', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                // প্রক্সি সার্ভারের মাধ্যমে পাঠানোর জন্য বডিতে মেটাডাটা ও রিয়েল রিকোয়েস্ট পাঠানো হচ্ছে
-                body: JSON.stringify({
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-rapidapi-host': 'whatsapp-osint.p.rapidapi.com',
-                        'x-rapidapi-key': 'b3ad11e41cmshb18121f061df58ep1b5c61jsnd7a63dda9d56'
-                    },
-                    body: JSON.stringify(payload)
-                })
+                body: JSON.stringify({ phone: cleanPhone })
             })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('Network response failure (Status: ' + response.status + ')');
+                    throw new Error('Server Error (Status: ' + response.status + ')');
                 }
                 return response.json();
             })
-            .then(proxyData => {
+            .then(data => {
                 loader.classList.add('hidden');
-                
-                // Allorigins প্রক্সি ডাটা মূলত 'contents' স্ট্রিং এর ভেতর পাঠায়, তাই একে পার্স করতে হবে
-                let data;
-                try {
-                    data = JSON.parse(proxyData.contents);
-                } catch(e) {
-                    data = proxyData.contents || proxyData;
-                }
-
                 console.log("=== API RAW RESPONSE ===", data);
 
                 document.getElementById('resPhoneCard').innerText = "+" + cleanPhone;
@@ -232,9 +194,7 @@
                         targetData = data.data;
                     }
 
-                    console.log("--- Extracted Target Object ---", targetData);
-
-                    const bizName = targetData.name || targetData.pushname || targetData.pushName || targetData.verified_name || targetData.verifiedName || targetData.title || targetData.id || "UNKNOWN USER";
+                    const bizName = targetData.name || targetData.pushname || targetData.pushName || targetData.verified_name || targetData.verifiedName || targetData.title || "UNKNOWN USER";
                     const bizStatus = targetData.status || targetData.about || targetData.description || "ACTIVE NODE";
                     
                     document.getElementById('resPushName').innerText = bizName;
@@ -252,12 +212,11 @@
                         avatarFallback.classList.remove('hidden');
                     }
                 }
-
                 results.classList.remove('hidden');
             })
             .catch(err => {
                 loader.classList.add('hidden');
-                alert('EXPLOIT_FAILED / TIMEOUT: ' + err.message + '\nলোকালহোস্টে ঠিক চললে এটি নিশ্চিতভাবে নেটওয়ার্ক ব্লকিং সমস্যা।');
+                alert('EXPLOIT_FAILED: ' + err.message);
                 console.error(err);
             });
         }
